@@ -5,3 +5,6 @@
 /.idea
 dist/
 .vscode
+
+vendor
+*.exe

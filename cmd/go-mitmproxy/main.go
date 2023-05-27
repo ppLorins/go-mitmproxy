@@ -28,9 +28,15 @@ type Config struct {
 	MapLocal    string   // map local config filename
 
 	filename string // read config from the filename
+
+	Upstream string
 }
 
 func main() {
+
+	//a := os.Environ()
+	//fmt.Println(a)
+
 	config := loadConfig()
 
 	if config.Debug > 0 {
@@ -53,6 +59,7 @@ func main() {
 		StreamLargeBodies: 1024 * 1024 * 5,
 		SslInsecure:       config.SslInsecure,
 		CaRootPath:        config.CertPath,
+		Upstream:          config.Upstream,
 	}
 
 	p, err := proxy.NewProxy(opts)

@@ -28,6 +28,7 @@ func loadConfigFromCli() *Config {
 	flag.StringVar(&config.MapRemote, "map_remote", "", "map remote config filename")
 	flag.StringVar(&config.MapLocal, "map_local", "", "map local config filename")
 	flag.StringVar(&config.filename, "f", "", "read config from the filename")
+	flag.StringVar(&config.Upstream, "upstream", "", "set upstream proxy")
 	flag.Parse()
 
 	return config
@@ -68,6 +69,9 @@ func mergeConfigs(fileConfig, cliConfig *Config) *Config {
 	}
 	if cliConfig.MapLocal != "" {
 		config.MapLocal = cliConfig.MapLocal
+	}
+	if cliConfig.Upstream != "" {
+		config.Upstream = cliConfig.Upstream
 	}
 	return config
 }

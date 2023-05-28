@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"flag"
@@ -8,6 +8,29 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type Config struct {
+	Version bool // show go-mitmproxy version
+
+	Addr        string   // proxy listen addr
+	WebAddr     string   // web interface listen addr
+	SslInsecure bool     // not verify upstream server SSL/TLS certificates.
+	IgnoreHosts []string // a list of ignore hosts
+	AllowHosts  []string // a list of allow hosts
+	CertPath    string   // path of generate cert files
+	Debug       int      // debug mode: 1 - print debug log, 2 - show debug from
+	Dump        string   // dump filename
+	DumpLevel   int      // dump level: 0 - header, 1 - header + body
+	MapRemote   string   // map remote config filename
+	MapLocal    string   // map local config filename
+
+	filename string // read config from the filename
+
+	Upstream string
+
+	//openai addon
+	RedisConnString string
+}
+
 func loadConfigFromFile(filename string) (*Config, error) {
 	return proxy.NewStructFromFile[Config](filename)
 }
@@ -15,7 +38,7 @@ func loadConfigFromFile(filename string) (*Config, error) {
 func loadConfigFromCli() *Config {
 	config := new(Config)
 
-	flag.BoolVar(&config.version, "version", false, "show go-mitmproxy version")
+	flag.BoolVar(&config.Version, "version", false, "show go-mitmproxy version")
 	flag.StringVar(&config.Addr, "addr", ":9080", "proxy listen addr")
 	flag.StringVar(&config.WebAddr, "web_addr", ":9081", "web interface listen addr")
 	flag.BoolVar(&config.SslInsecure, "ssl_insecure", false, "not verify upstream server SSL/TLS certificates.")
@@ -29,6 +52,7 @@ func loadConfigFromCli() *Config {
 	flag.StringVar(&config.MapLocal, "map_local", "", "map local config filename")
 	flag.StringVar(&config.filename, "f", "", "read config from the filename")
 	flag.StringVar(&config.Upstream, "upstream", "", "set upstream proxy")
+	flag.StringVar(&config.RedisConnString, "redis_conn_string", "", "redis conn string: HOST_NAME:PORT_NUMBER,password=PASSWORD")
 	flag.Parse()
 
 	return config
@@ -76,21 +100,32 @@ func mergeConfigs(fileConfig, cliConfig *Config) *Config {
 	return config
 }
 
-func loadConfig() *Config {
-	cliConfig := loadConfigFromCli()
-	if cliConfig.version {
-		return cliConfig
+var globalConfig *Config
+
+func LoadConfig() *Config {
+	curConfig := loadConfigFromCli()
+	defer func() {
+		globalConfig = curConfig
+	}()
+
+	if curConfig.Version {
+		return curConfig
 	}
-	if cliConfig.filename == "" {
-		return cliConfig
+	if curConfig.filename == "" {
+		return curConfig
 	}
 
-	fileConfig, err := loadConfigFromFile(cliConfig.filename)
+	fileConfig, err := loadConfigFromFile(curConfig.filename)
 	if err != nil {
-		log.Warnf("read config from %v error %v", cliConfig.filename, err)
-		return cliConfig
+		log.Warnf("read config from %v error %v", curConfig.filename, err)
+		return curConfig
 	}
-	return mergeConfigs(fileConfig, cliConfig)
+	curConfig = mergeConfigs(fileConfig, curConfig)
+	return curConfig
+}
+
+func GetGlobalConfig() *Config {
+	return globalConfig
 }
 
 // arrayValue 实现了 flag.Value 接口

@@ -7,37 +7,18 @@ import (
 	"strings"
 
 	"github.com/lqqyt2423/go-mitmproxy/addon"
+	cf "github.com/lqqyt2423/go-mitmproxy/config"
 	"github.com/lqqyt2423/go-mitmproxy/proxy"
 	"github.com/lqqyt2423/go-mitmproxy/web"
 	log "github.com/sirupsen/logrus"
 )
-
-type Config struct {
-	version bool // show go-mitmproxy version
-
-	Addr        string   // proxy listen addr
-	WebAddr     string   // web interface listen addr
-	SslInsecure bool     // not verify upstream server SSL/TLS certificates.
-	IgnoreHosts []string // a list of ignore hosts
-	AllowHosts  []string // a list of allow hosts
-	CertPath    string   // path of generate cert files
-	Debug       int      // debug mode: 1 - print debug log, 2 - show debug from
-	Dump        string   // dump filename
-	DumpLevel   int      // dump level: 0 - header, 1 - header + body
-	MapRemote   string   // map remote config filename
-	MapLocal    string   // map local config filename
-
-	filename string // read config from the filename
-
-	Upstream string
-}
 
 func main() {
 
 	//a := os.Environ()
 	//fmt.Println(a)
 
-	config := loadConfig()
+	config := cf.LoadConfig()
 
 	if config.Debug > 0 {
 		rawLog.SetFlags(rawLog.LstdFlags | rawLog.Lshortfile)
@@ -67,7 +48,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if config.version {
+	if config.Version {
 		fmt.Println("go-mitmproxy: " + p.Version)
 		os.Exit(0)
 	}
@@ -110,6 +91,8 @@ func main() {
 		dumper := addon.NewDumperWithFilename(config.Dump, config.DumpLevel)
 		p.AddAddon(dumper)
 	}
+
+	p.AddAddon(addon.NewOpenAI())
 
 	log.Fatal(p.Start())
 }

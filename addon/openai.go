@@ -7,10 +7,15 @@ import (
 	"github.com/lqqyt2423/go-mitmproxy/proxy"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 	"strings"
 )
 
 // decode content-encoding then respond to client
+
+const (
+	MJ_SESSION_ID = "f841f6b3-e854-4107-98d3-5ba81d9bfc65"
+)
 
 type ConversationRequest struct {
 	Action   string `json:"action"`
@@ -97,6 +102,9 @@ func (o *OpenAI) Response(f *proxy.Flow) {
 	}
 
 	c1 := req.ConversationID
+	if c1 == MJ_SESSION_ID {
+		return
+	}
 
 	var decodedBody []byte
 	decodedBody, e = f.Response.DecodedBody()
@@ -162,6 +170,10 @@ func (o *OpenAI) Response(f *proxy.Flow) {
 func (o *OpenAI) isConversationRPC(f *proxy.Flow) bool {
 	u := f.Request.URL
 	if !strings.Contains(u.Hostname(), "chat.openai.com") {
+		return false
+	}
+
+	if f.Request.Method != http.MethodPost {
 		return false
 	}
 

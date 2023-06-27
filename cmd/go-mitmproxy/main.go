@@ -93,6 +93,7 @@ func main() {
 	}
 
 	p.AddAddon(addon.NewOpenAI())
+	p.AddAddon(addon.NewMidJourney())
 
 	log.Fatal(p.Start())
 }

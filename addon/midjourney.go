@@ -33,6 +33,14 @@ func (o *MidJourney) Initialize() {
 	redis.InitializeRedis()
 }
 
+//func (o *MidJourney) Response(f *proxy.Flow) {
+//	if !o.isInteractionRPC(f) {
+//		return
+//	}
+//
+//	fmt.Println("xxx")
+//}
+
 func (o *MidJourney) Request(f *proxy.Flow) {
 	if !o.isInteractionRPC(f) {
 		return
@@ -61,6 +69,7 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 			log.Error("[midJourney plugin] extract seed failed:%s", e)
 			return
 		}
+		break
 	}
 
 	//push to redis
@@ -77,14 +86,17 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 			Header: string(hBytes),
 			UTime:  nowStr,
 		}
-
 		ir := &shared.ImagineRequestRedis{
 			Req:   req,
 			UTime: nowStr,
 		}
+		ls := &shared.MidJourneyLastSeedRedis{
+			Seed:  seed,
+			UTime: nowStr,
+		}
 
 		rc := redis.NewRedisClient()
-		err := rc.WriteMidJourneyRequestHttpContext(context.Background(), seed, bc, ir)
+		err := rc.WriteMidJourneyRequestHttpContext(context.Background(), seed, bc, ir, ls)
 		if err != nil {
 			log.Error("[MidJourney plugin] write MJ req-http-ctx to redis failed:%+v", e)
 			return

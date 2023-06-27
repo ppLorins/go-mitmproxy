@@ -6,10 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lqqyt2423/go-mitmproxy/addon"
-	cf "github.com/lqqyt2423/go-mitmproxy/config"
-	"github.com/lqqyt2423/go-mitmproxy/proxy"
-	"github.com/lqqyt2423/go-mitmproxy/web"
+	"github.com/pplorins/go-mitmproxy/addon"
+	cf "github.com/pplorins/go-mitmproxy/config"
+	"github.com/pplorins/go-mitmproxy/proxy"
+	"github.com/pplorins/go-mitmproxy/web"
 	log "github.com/sirupsen/logrus"
 )
 

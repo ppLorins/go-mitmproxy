@@ -2,7 +2,7 @@ all: mitmproxy
 
 .PHONY: mitmproxy
 
-go_cmd = go.exe
+go_cmd = go
 mitmproxy:
 	$(go_cmd) build -o go-mitmproxy cmd/go-mitmproxy/*.go
 

@@ -3,9 +3,9 @@ package addon
 import (
 	"context"
 	"encoding/json"
-	"github.com/lqqyt2423/go-mitmproxy/dao/redis"
-	"github.com/lqqyt2423/go-mitmproxy/proxy"
 	"github.com/pkg/errors"
+	"github.com/pplorins/go-mitmproxy/dao/redis"
+	"github.com/pplorins/go-mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
@@ -83,19 +83,12 @@ func (o *OpenAI) Initialize() {
 }
 
 func (o *OpenAI) Response(f *proxy.Flow) {
-	var e error
-	defer func() {
-		if e != nil {
-			//todo: notify with
-		}
-	}()
-
 	if !o.isConversationRPC(f) {
 		return
 	}
 
 	req := &ConversationRequest{}
-	e = json.Unmarshal(f.Request.Body, req)
+	e := json.Unmarshal(f.Request.Body, req)
 	if e != nil {
 		log.Error("[openAI plugin] unmarshal conversation request failed:%+v", e)
 		return

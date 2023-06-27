@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pplorins/go-mitmproxy/dao/redis"
 	"github.com/pplorins/go-mitmproxy/proxy"
-	"github.com/pplorins/go-mitmproxy/util"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/pplorins/wechat-official-accounts/chatgpt/shared"
 	"net/http"
@@ -129,7 +128,7 @@ func (o *MidJourney) extractSeed(prompt string) (string, error) {
 		return "", errors.Errorf("RE match prompt failed")
 	}
 
-	cgm := util.GetCaptureGroupMap(rePrompt, ma)
+	cgm := shared.GetCaptureGroupMap(rePrompt, ma)
 
 	return cgm["seed"], nil
 }

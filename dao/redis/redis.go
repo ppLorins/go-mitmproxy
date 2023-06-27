@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	cf "github.com/pplorins/go-mitmproxy/config"
-	"github.com/pplorins/go-mitmproxy/util"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/pplorins/wechat-official-accounts/chatgpt/shared"
 	"regexp"
@@ -100,11 +99,11 @@ func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 	bk := fmt.Sprintf(shared.MJ_BASE_REQ_CTX_KEY)
 	mk := fmt.Sprintf(shared.MJ_IMAGINE_REQ_CTX_KEY, seed)
 
-	bm, e := util.Struct2HashFields(ctx, bc)
+	bm, e := shared.Struct2HashFields(ctx, bc)
 	if e != nil {
 		return errors.Errorf("convert struct ChannelContext to map failed:%+v", e)
 	}
-	im, e := util.Struct2HashFields(ctx, ir)
+	im, e := shared.Struct2HashFields(ctx, ir)
 	if e != nil {
 		return errors.Errorf("convert struct MsgContext to map failed:%+v", e)
 	}

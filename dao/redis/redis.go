@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	cf "github.com/pplorins/go-mitmproxy/config"
@@ -106,9 +107,9 @@ func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 	if e != nil {
 		return errors.Errorf("convert struct ChannelContext to map failed:%+v", e)
 	}
-	im, e := shared.Struct2HashFields(ctx, ir)
+	ib, e := json.Marshal(ir)
 	if e != nil {
-		return errors.Errorf("convert struct MsgContext to map failed:%+v", e)
+		return errors.Errorf("marshal ir failed:%+v", e)
 	}
 	lsm, e := shared.Struct2HashFields(ctx, ls)
 	if e != nil {
@@ -122,11 +123,11 @@ func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 			if e != nil {
 				return errors.Errorf("hset bk failed")
 			}
-			e = r.rdb.HSet(ctx, mk, im, redis.KeepTTL).Err()
+			e = r.rdb.Set(ctx, mk, ib, redis.KeepTTL).Err()
 			if e != nil {
 				return errors.Errorf("hset mk failed")
 			}
-			e = r.rdb.HSet(ctx, ck, lsm, redis.KeepTTL).Err()
+			e = r.rdb.HSet(ctx, ck, lsm).Err()
 			if e != nil {
 				return errors.Errorf("hset ck failed")
 			}

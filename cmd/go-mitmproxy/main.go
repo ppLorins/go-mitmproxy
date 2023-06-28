@@ -2,15 +2,21 @@ package main
 
 import (
 	"fmt"
-	rawLog "log"
-	"os"
-	"strings"
-
 	"github.com/pplorins/go-mitmproxy/addon"
 	cf "github.com/pplorins/go-mitmproxy/config"
 	"github.com/pplorins/go-mitmproxy/proxy"
 	"github.com/pplorins/go-mitmproxy/web"
 	log "github.com/sirupsen/logrus"
+	rawLog "log"
+	"os"
+	"strings"
+)
+
+//var once sync.Once
+//var logger *logrus.Logger
+
+const (
+	LOG_TIME_FORMAT = "2006-01-02 15:04:05.999-07:00"
 )
 
 func main() {
@@ -126,3 +132,27 @@ func splitHostPort(address string) (string, string) {
 	}
 	return address[:index], address[index+1:]
 }
+
+//func InitLog() {
+//	once.Do(func() {
+//		logger = logrus.New()
+//		logger.SetReportCaller(true)
+//		logger.SetFormatter(&prefixed.TextFormatter{
+//			FullTimestamp:    true,
+//			TimestampFormat:  LOG_TIME_FORMAT,
+//			ForceFormatting:  true,
+//			ForceColors:      true,
+//			DisableColors:    false,
+//			DisableTimestamp: false,
+//		})
+//		logger.SetLevel(logrus.InfoLevel)
+//		f, e := os.OpenFile(path.Join("log", "biz.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+//		if e != nil {
+//			panic(e)
+//		}
+//		mw := io.MultiWriter(f, os.Stdout)
+//		logger.SetOutput(mw)
+//	})
+//
+//	logger.Infof("logger initialized successfully")
+//}

@@ -41,22 +41,58 @@ func (o *MidJourney) Initialize() {
 //	fmt.Println("xxx")
 //}
 
+func (o *MidJourney) parseImagineJson(f *proxy.Flow) (string, error) {
+
+	req := f.Request
+	for _, item := range req.Header["Content-Type"] {
+		if item == "application/json" {
+			return string(req.Body), nil
+		}
+	}
+
+	s := string(f.Request.Body)
+
+	target := `name="payload_json"`
+	start := strings.Index(s, target)
+	if start == -1 {
+		return "", errors.Errorf("no start boundary data found")
+	}
+	start += len(target)
+
+	s = s[start:]
+
+	end := strings.Index(s, "------")
+	if end == -1 {
+		return "", errors.Errorf("no end boundary data found")
+	}
+	//skip over "\r\n\r\n", which has 4 bytes
+	s = s[4:end]
+
+	return s, nil
+}
+
 func (o *MidJourney) Request(f *proxy.Flow) {
 	if !o.isInteractionRPC(f) {
 		return
 	}
 
-	bytes := f.Request.Body
-	req := &shared.ImagineRequest{}
-	e := json.Unmarshal(bytes, req)
+	j, e := o.parseImagineJson(f)
 	if e != nil {
-		log.Error("[MidJourney plugin] unmarshal conversation request failed:%+v", e)
+		log.Error("[MidJourney plugin] parse imagine payload failed:%+v", e)
 		return
 	}
 
-	if !o.isAnchorRequest(req) {
+	req := &shared.ImagineRequest{}
+	e = json.Unmarshal([]byte(j), req)
+	if e != nil {
+		//may be other request, like VUR
+		log.Debugf("[MidJourney plugin] unmarshal conversation request failed:%+v", e)
 		return
 	}
+
+	//if !o.isAnchorRequest(req) {
+	//	return
+	//}
 
 	seed := ""
 	for _, op := range req.Data.Options {

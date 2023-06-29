@@ -7,8 +7,10 @@ import (
 	"github.com/pplorins/go-mitmproxy/proxy"
 	"github.com/pplorins/go-mitmproxy/web"
 	log "github.com/sirupsen/logrus"
+	"io"
 	rawLog "log"
 	"os"
+	"path"
 	"strings"
 )
 
@@ -32,12 +34,23 @@ func main() {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-	if config.Debug == 2 {
-		log.SetReportCaller(true)
+	//if config.Debug == 2 {
+	log.SetReportCaller(true)
+	//}
+	f, e := os.OpenFile(path.Join("log", "go_mitmproxy.log"),
+		os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if e != nil {
+		panic(e)
 	}
-	log.SetOutput(os.Stdout)
+	mw := io.MultiWriter(f, os.Stdout)
+	log.SetOutput(mw)
+
 	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
+		FullTimestamp:    true,
+		TimestampFormat:  LOG_TIME_FORMAT,
+		ForceColors:      true,
+		DisableColors:    false,
+		DisableTimestamp: false,
 	})
 
 	opts := &proxy.Options{

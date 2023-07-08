@@ -33,25 +33,14 @@ func (o *MidJourney) Initialize() {
 	redis.InitializeRedis()
 }
 
-//func (o *MidJourney) Response(f *proxy.Flow) {
-//	if !o.isInteractionRPC(f) {
-//		return
-//	}
-//
-//	fmt.Println("xxx")
-//}
-
-func (o *MidJourney) parseImagineJson(f *proxy.Flow) (string, error) {
-
+func (o *MidJourney) parseImagineJson(f *proxy.Flow, simplifiedFormat bool) (string, error) {
 	req := f.Request
-	for _, item := range req.Header["Content-Type"] {
-		if item == "application/json" {
-			return string(req.Body), nil
-		}
+	if simplifiedFormat {
+		return string(req.Body), nil
 	}
 
-	s := string(f.Request.Body)
-
+	//parse boundary, original format is not standard multipul-part/form-data
+	s := string(req.Body)
 	target := `name="payload_json"`
 	start := strings.Index(s, target)
 	if start == -1 {
@@ -71,12 +60,46 @@ func (o *MidJourney) parseImagineJson(f *proxy.Flow) (string, error) {
 	return s, nil
 }
 
+func (o *MidJourney) check(f *proxy.Flow) (bool, bool, string) {
+	hdr := f.Request.Header
+
+	defer func() {
+		delete(f.Request.Header, shared.HTTP_HDR_JOB_TYPE)
+	}()
+
+	//requests without this key
+	jtl, ok := hdr[shared.HTTP_HDR_JOB_TYPE]
+	if !ok {
+		return true, false, shared.MJ_JOB_WI
+	}
+	if len(jtl) < 1 {
+		return true, false, shared.MJ_JOB_WI
+	}
+
+	jobType := jtl[0]
+	if jobType == shared.MJ_JOB_WI {
+		return true, false, jobType
+	}
+
+	if jobType == shared.MJ_JOB_I {
+		return true, true, jobType
+	}
+
+	//UVR no need to process
+	return false, false, jobType
+}
+
 func (o *MidJourney) Request(f *proxy.Flow) {
 	if !o.isInteractionRPC(f) {
 		return
 	}
 
-	j, e := o.parseImagineJson(f)
+	needProcess, simplifiedFormat, _ := o.check(f)
+	if !needProcess {
+		return
+	}
+
+	j, e := o.parseImagineJson(f, simplifiedFormat)
 	if e != nil {
 		log.Error("[MidJourney plugin] parse imagine payload failed:%+v", e)
 		return
@@ -85,30 +108,25 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 	req := &shared.ImagineRequest{}
 	e = json.Unmarshal([]byte(j), req)
 	if e != nil {
-		//may be other request, like VUR
-		log.Debugf("[MidJourney plugin] unmarshal conversation request failed:%+v", e)
+		log.Errorf("[MidJourney plugin] unmarshal conversation request failed:%+v", e)
 		return
 	}
 
-	//if !o.isAnchorRequest(req) {
-	//	return
-	//}
-
-	seed := ""
+	taskID := ""
 	for _, op := range req.Data.Options {
 		if op.Name != "prompt" {
 			continue
 		}
 		prompt := op.Value
-		seed, e = o.extractSeed(prompt)
+		taskID, e = o.extractSeed(prompt)
 		if e != nil {
-			log.Error("[midJourney plugin] extract seed failed:%s", e)
-			return
+			log.Warnf("[midJourney plugin] extract taskID failed:%s,mayBe webImagine without seed,ignore & continue..", e)
+			taskID = ""
 		}
 		break
 	}
 
-	//push to redis
+	//save to redis
 	go func() {
 		hBytes, e := json.Marshal(f.Request.Header)
 		if e != nil {
@@ -117,7 +135,8 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 
 		log.Infof("[MidJourney plugin] save anchor mj prompt http ctx to redis now")
 
-		nowStr := time.Now().Format(shared.CLIENT_TIME_FORMAT)
+		now := time.Now()
+		nowStr := now.Format(shared.CLIENT_TIME_FORMAT)
 		bc := &shared.MidJourneyBaseHttpRequestContext{
 			Header: string(hBytes),
 			UTime:  nowStr,
@@ -126,13 +145,18 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 			Req:   req,
 			UTime: nowStr,
 		}
-		ls := &shared.MidJourneyLastSeedRedis{
-			Seed:  seed,
-			UTime: nowStr,
+
+		var ls *shared.MidJourneyLastTaskRedis = nil
+		if taskID != "" {
+			ls = &shared.MidJourneyLastTaskRedis{
+				TaskID:  taskID,
+				UTime:   nowStr,
+				UTimeTS: uint32(now.Unix()),
+			}
 		}
 
 		rc := redis.NewRedisClient()
-		err := rc.WriteMidJourneyRequestHttpContext(context.Background(), seed, bc, ir, ls)
+		err := rc.WriteMidJourneyRequestHttpContext(context.Background(), taskID, bc, ir, ls)
 		if err != nil {
 			log.Error("[MidJourney plugin] write MJ req-http-ctx to redis failed:%+v", e)
 			return
@@ -155,19 +179,6 @@ func (o *MidJourney) isInteractionRPC(f *proxy.Flow) bool {
 	}
 
 	return true
-}
-
-func (o *MidJourney) isAnchorRequest(req *shared.ImagineRequest) bool {
-	for _, op := range req.Data.Options {
-		if op.Name != "prompt" {
-			continue
-		}
-		prompt := op.Value
-		if prompt == shared.ANCHOR_PROMPT {
-			return true
-		}
-	}
-	return false
 }
 
 func (o *MidJourney) extractSeed(prompt string) (string, error) {

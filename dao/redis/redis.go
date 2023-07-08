@@ -93,15 +93,15 @@ func (r *RedisClient) NotifyAnswer(ctx context.Context, sessionID, answer string
 }
 
 func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
-	seed string,
+	taskID string,
 	bc *shared.MidJourneyBaseHttpRequestContext,
 	ir *shared.ImagineRequestRedis,
-	ls *shared.MidJourneyLastSeedRedis,
+	ls *shared.MidJourneyLastTaskRedis,
 ) error {
 
 	bk := shared.MJ_BASE_REQ_CTX_KEY
-	mk := fmt.Sprintf(shared.MJ_IMAGINE_REQ_CTX_KEY, seed)
-	ck := shared.MJ_LAST_SEED_KEY
+	mk := fmt.Sprintf(shared.MJ_IMAGINE_REQ_CTX_KEY, taskID)
+	ck := shared.MJ_LAST_TASK_KEY
 
 	bm, e := shared.Struct2HashFields(ctx, bc)
 	if e != nil {
@@ -111,25 +111,27 @@ func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 	if e != nil {
 		return errors.Errorf("marshal ir failed:%+v", e)
 	}
-	lsm, e := shared.Struct2HashFields(ctx, ls)
-	if e != nil {
-		return errors.Errorf("convert struct MsgContext to map failed:%+v", e)
-	}
 
 	pks := make([]string, 0, 10)
 	txf := func(tx *redis.Tx) error {
 		_, err := tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-			e = r.rdb.HSet(ctx, bk, bm).Err()
+			e = pipe.HSet(ctx, bk, bm).Err()
 			if e != nil {
 				return errors.Errorf("hset bk failed")
 			}
-			e = r.rdb.Set(ctx, mk, ib, redis.KeepTTL).Err()
+			e = pipe.Set(ctx, mk, ib, shared.Duration24Hour).Err()
 			if e != nil {
 				return errors.Errorf("hset mk failed")
 			}
-			e = r.rdb.HSet(ctx, ck, lsm).Err()
-			if e != nil {
-				return errors.Errorf("hset ck failed")
+			if ls != nil {
+				lsm, e := shared.Struct2HashFields(ctx, ls)
+				if e != nil {
+					return errors.Errorf("convert struct MsgContext to map failed:%+v", e)
+				}
+				e = pipe.HSet(ctx, ck, lsm).Err()
+				if e != nil {
+					return errors.Errorf("hset ck failed")
+				}
 			}
 			return nil
 		})

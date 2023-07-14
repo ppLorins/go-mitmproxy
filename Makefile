@@ -1,10 +1,13 @@
-all: mitmproxy
+all: mitmproxy-linux
 
 .PHONY: mitmproxy
 
 go_cmd = go
 mitmproxy:
 	$(go_cmd) build -o go-mitmproxy cmd/go-mitmproxy/*.go
+
+mitmproxy-linux:
+	GOOS=linux GOARCH=amd64 $(go_cmd) build -o go-mitmproxy-linux cmd/go-mitmproxy/*.go
 
 .PHONY: dummycert
 dummycert:

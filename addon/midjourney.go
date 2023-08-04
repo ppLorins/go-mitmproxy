@@ -105,7 +105,7 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 		return
 	}
 
-	req := &shared.ImagineRequest{}
+	req := &shared.InteractionRequest{}
 	e = json.Unmarshal([]byte(j), req)
 	if e != nil {
 		log.Errorf("[MidJourney plugin] unmarshal conversation request failed:%+v", e)

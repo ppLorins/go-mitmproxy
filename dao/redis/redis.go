@@ -103,7 +103,7 @@ func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 	mk := fmt.Sprintf(shared.MJ_IMAGINE_REQ_CTX_KEY, taskID)
 	ck := shared.MJ_LAST_TASK_KEY
 
-	bm, e := shared.Struct2HashFields(ctx, bc)
+	bm, e := shared.Struct2HashFields(ctx, bc, false)
 	if e != nil {
 		return errors.Errorf("convert struct ChannelContext to map failed:%+v", e)
 	}
@@ -124,7 +124,7 @@ func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 				return errors.Errorf("hset mk failed")
 			}
 			if ls != nil {
-				lsm, e := shared.Struct2HashFields(ctx, ls)
+				lsm, e := shared.Struct2HashFields(ctx, ls, false)
 				if e != nil {
 					return errors.Errorf("convert struct MsgContext to map failed:%+v", e)
 				}

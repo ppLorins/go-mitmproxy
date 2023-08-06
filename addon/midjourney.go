@@ -60,7 +60,7 @@ func (o *MidJourney) parseImagineJson(f *proxy.Flow, simplifiedFormat bool) (str
 	return s, nil
 }
 
-func (o *MidJourney) check(f *proxy.Flow) (bool, bool, string) {
+func (o *MidJourney) check(f *proxy.Flow) (bool, bool) {
 	hdr := f.Request.Header
 
 	defer func() {
@@ -70,23 +70,23 @@ func (o *MidJourney) check(f *proxy.Flow) (bool, bool, string) {
 	//requests without this key
 	jtl, ok := hdr[shared.HTTP_HDR_JOB_TYPE]
 	if !ok {
-		return true, false, shared.MJ_JOB_WI
+		return true, false //, shared.MJ_JOB_WI
 	}
 	if len(jtl) < 1 {
-		return true, false, shared.MJ_JOB_WI
+		return true, false //, shared.MJ_JOB_WI
 	}
 
-	jobType := jtl[0]
-	if jobType == shared.MJ_JOB_WI {
-		return true, false, jobType
-	}
-
-	if jobType == shared.MJ_JOB_I {
-		return true, true, jobType
-	}
+	//jobType := jtl[0]
+	//if jobType == shared.MJ_JOB_WI {
+	//	return true, false//, jobType
+	//}
+	//
+	//if jobType == shared.MJ_JOB_I {
+	//	return true, true, jobType
+	//}
 
 	//UVR no need to process
-	return false, false, jobType
+	return false, false //, jobType
 }
 
 func (o *MidJourney) Request(f *proxy.Flow) {
@@ -94,7 +94,7 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 		return
 	}
 
-	needProcess, simplifiedFormat, _ := o.check(f)
+	needProcess, simplifiedFormat := o.check(f)
 	if !needProcess {
 		return
 	}
@@ -112,13 +112,41 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 		return
 	}
 
+	ctx := context.Background()
+	now := time.Now()
+	nowStr := now.Format(shared.CLIENT_TIME_FORMAT)
+
+	//describe cmd
+	if req.Data.Name == "describe" {
+		go func() {
+			ir := &shared.InteractionRequestRedis{
+				Req:   req,
+				UTime: nowStr,
+			}
+			r := redis.NewRedisClient()
+			e := r.WriteMJDescReqDetail(ctx, ir)
+			if e != nil {
+				log.Error("[MidJourney plugin] write MJ describe req-http-ctx to redis failed:%+v", e)
+				return
+			}
+		}()
+		return
+	}
+
+	//imagine cmd
 	taskID := ""
 	for _, op := range req.Data.Options {
 		if op.Name != "prompt" {
 			continue
 		}
 		prompt := op.Value
-		taskID, e = o.extractSeed(prompt)
+		p, e := prompt.MarshalJSON()
+		if e != nil {
+			log.Error("[MidJourney plugin] marshal data.Options.Value failed:%+v", e)
+			return
+		}
+		ps := strings.Trim(string(p), "\"")
+		taskID, e = o.extractSeed(ps)
 		if e != nil {
 			log.Warnf("[midJourney plugin] extract taskID failed:%s,mayBe webImagine without seed,ignore & continue..", e)
 			taskID = ""
@@ -135,13 +163,11 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 
 		log.Infof("[MidJourney plugin] save anchor mj prompt http ctx to redis now")
 
-		now := time.Now()
-		nowStr := now.Format(shared.CLIENT_TIME_FORMAT)
 		bc := &shared.MidJourneyBaseHttpRequestContext{
 			Header: string(hBytes),
 			UTime:  nowStr,
 		}
-		ir := &shared.ImagineRequestRedis{
+		ir := &shared.InteractionRequestRedis{
 			Req:   req,
 			UTime: nowStr,
 		}
@@ -155,9 +181,9 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 			}
 		}
 
-		rc := redis.NewRedisClient()
-		err := rc.WriteMidJourneyRequestHttpContext(context.Background(), taskID, bc, ir, ls)
-		if err != nil {
+		r := redis.NewRedisClient()
+		e = r.WriteMidJourneyRequestHttpContext(ctx, taskID, bc, ir, ls)
+		if e != nil {
 			log.Error("[MidJourney plugin] write MJ req-http-ctx to redis failed:%+v", e)
 			return
 		}

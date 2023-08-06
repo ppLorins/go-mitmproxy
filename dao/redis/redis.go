@@ -95,7 +95,7 @@ func (r *RedisClient) NotifyAnswer(ctx context.Context, sessionID, answer string
 func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 	taskID string,
 	bc *shared.MidJourneyBaseHttpRequestContext,
-	ir *shared.ImagineRequestRedis,
+	ir *shared.InteractionRequestRedis,
 	ls *shared.MidJourneyLastTaskRedis,
 ) error {
 
@@ -140,4 +140,18 @@ func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 
 	watchKeys := append(pks, bk, mk)
 	return r.txnLoop(ctx, txf, watchKeys...)
+}
+
+func (r *RedisClient) WriteMJDescReqDetail(ctx context.Context, ir *shared.InteractionRequestRedis) error {
+	dk := shared.MJ_LAST_DESC_DETAIL_KEY
+	bm, e := shared.Struct2HashFields(ctx, ir, false)
+	if e != nil {
+		return errors.Errorf("convert struct ChannelContext to map failed:%+v", e)
+	}
+	e = r.rdb.HSet(ctx, dk, bm).Err()
+	if e != nil {
+		return errors.Errorf("hset bk failed")
+	}
+
+	return nil
 }

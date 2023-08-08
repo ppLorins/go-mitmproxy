@@ -144,7 +144,7 @@ func (r *RedisClient) WriteMidJourneyRequestHttpContext(ctx context.Context,
 
 func (r *RedisClient) WriteMJDescReqDetail(ctx context.Context, ir *shared.InteractionRequestRedis) error {
 	dk := shared.MJ_LAST_DESC_DETAIL_KEY
-	bm, e := shared.Struct2HashFields(ctx, ir, false)
+	bm, e := shared.Struct2HashFields(ctx, ir, true)
 	if e != nil {
 		return errors.Errorf("convert struct ChannelContext to map failed:%+v", e)
 	}

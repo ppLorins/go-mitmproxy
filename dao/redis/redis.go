@@ -155,3 +155,17 @@ func (r *RedisClient) WriteMJDescReqDetail(ctx context.Context, ir *shared.Inter
 
 	return nil
 }
+
+func (r *RedisClient) WriteMJBlendReqDetail(ctx context.Context, ir *shared.InteractionRequestRedis) error {
+	dk := shared.MJ_LAST_BLEND_DETAIL_KEY
+	bm, e := shared.Struct2HashFields(ctx, ir, true)
+	if e != nil {
+		return errors.Errorf("convert struct ChannelContext to map failed:%+v", e)
+	}
+	e = r.rdb.HSet(ctx, dk, bm).Err()
+	if e != nil {
+		return errors.Errorf("hset bk failed")
+	}
+
+	return nil
+}

@@ -85,7 +85,7 @@ func (o *MidJourney) check(f *proxy.Flow) (bool, bool) {
 	//	return true, true, jobType
 	//}
 
-	//UVR no need to process
+	//program generated requests no need to process
 	return false, false //, jobType
 }
 
@@ -101,7 +101,8 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 
 	j, e := o.parseImagineJson(f, simplifiedFormat)
 	if e != nil {
-		log.Error("[MidJourney plugin] parse imagine payload failed:%+v", e)
+		//uvr reqeust could also reach here
+		log.Warnf("[MidJourney plugin] parse imagine payload failed:%+v, maybe a uvr request", e)
 		return
 	}
 
@@ -133,6 +134,22 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 		return
 	}
 
+	if req.Data.Name == "blend" {
+		go func() {
+			ir := &shared.InteractionRequestRedis{
+				Req:   req,
+				UTime: nowStr,
+			}
+			r := redis.NewRedisClient()
+			e := r.WriteMJBlendReqDetail(ctx, ir)
+			if e != nil {
+				log.Error("[MidJourney plugin] write MJ describe req-http-ctx to redis failed:%+v", e)
+				return
+			}
+		}()
+		return
+	}
+
 	//imagine cmd
 	taskID := ""
 	for _, op := range req.Data.Options {
@@ -154,7 +171,6 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 		break
 	}
 
-	//save to redis
 	go func() {
 		hBytes, e := json.Marshal(f.Request.Header)
 		if e != nil {
@@ -181,6 +197,7 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 			}
 		}
 
+		//save to redis
 		r := redis.NewRedisClient()
 		e = r.WriteMidJourneyRequestHttpContext(ctx, taskID, bc, ir, ls)
 		if e != nil {

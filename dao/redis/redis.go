@@ -165,3 +165,8 @@ func (r *RedisClient) writeMJInteractionReqDetail(ctx context.Context, dk string
 
 	return nil
 }
+
+func (r *RedisClient) WriteMJShowReqDetail(ctx context.Context, ir *shared.InteractionRequestRedis) error {
+	dk := shared.MJ_LAST_SHOW_DETAIL_KEY
+	return r.writeMJInteractionReqDetail(ctx, dk, ir)
+}

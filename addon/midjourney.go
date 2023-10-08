@@ -134,6 +134,7 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 		return
 	}
 
+	//blend cmd
 	if req.Data.Name == "blend" {
 		go func() {
 			ir := &shared.InteractionRequestRedis{
@@ -142,6 +143,23 @@ func (o *MidJourney) Request(f *proxy.Flow) {
 			}
 			r := redis.NewRedisClient()
 			e := r.WriteMJBlendReqDetail(ctx, ir)
+			if e != nil {
+				log.Error("[MidJourney plugin] write MJ describe req-http-ctx to redis failed:%+v", e)
+				return
+			}
+		}()
+		return
+	}
+
+	//show cmd
+	if req.Data.Name == "show" {
+		go func() {
+			ir := &shared.InteractionRequestRedis{
+				Req:   req,
+				UTime: nowStr,
+			}
+			r := redis.NewRedisClient()
+			e := r.WriteMJShowReqDetail(ctx, ir)
 			if e != nil {
 				log.Error("[MidJourney plugin] write MJ describe req-http-ctx to redis failed:%+v", e)
 				return

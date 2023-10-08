@@ -5,6 +5,9 @@
 /.idea
 dist/
 .vscode
+log
+go-mitmproxy-linux
+go_mitmproxy
 
 vendor
 *.exe
